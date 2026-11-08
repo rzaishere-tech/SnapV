@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SnapV - Short Video Platform</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            snapv: {
+              red: '#ff2a5f',
+              cyan: '#00f2fe',
+              blue: '#4facfe',
+              dark: '#080c14',
+              card: '#0f172a',
+              gold: '#ffb700'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom vertical scroll snapping */
+    .snap-container {
+      scroll-snap-type: y mandatory;
+      overflow-y: scroll;
+      height: calc(100vh - 64px);
+    }
+    .snap-child {
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+      height: calc(100vh - 64px);
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    @keyframes heartPop {
+      0% { transform: scale(0.4); opacity: 0; }
+      50% { transform: scale(1.4); opacity: 1; }
+      100% { transform: scale(1); opacity: 0; }
+    }
+    .heart-anim {
+      animation: heartPop 0.75s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="bg-black text-white font-sans antialiased select-none overflow-hidden">
+
+  <!-- Top Navigation Header -->
+  <header class="h-16 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-snapv-red to-snapv-cyan flex items-center justify-center text-white font-black text-xl shadow-lg shadow-red-500/20">
+        V
+      </div>
+      <span class="text-xl font-extrabold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-snapv-red via-purple-400 to-snapv-cyan">
+        SnapV
+      </span>
+    </div>
+
+    <!-- Feed Switch Tabs -->
+    <div class="flex items-center space-x-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
+      <button onclick="switchMainTab('forYou')" id="tabForYou" class="px-4 py-1.5 rounded-lg text-sm font-bold bg-snapv-red text-white transition-all shadow-md shadow-red-500/20">
+        For You
+      </button>
+      <button onclick="switchMainTab('following')" id="tabFollowing" class="px-4 py-1.5 rounded-lg text-sm font-bold text-slate-400 hover:text-white transition-all">
+        Following
+      </button>
+    </div>
+
+    <!-- Action Header Controls -->
+    <div class="flex items-center space-x-2 sm:space-x-3">
+      <!-- Admin Button (Shown if razaisraza1@hotmail.com) -->
+      <button id="adminBtn" onclick="openAdminModal()" class="hidden px-3 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-slate-950 shadow-md transition-all flex items-center space-x-1">
+        <i class="fa-solid fa-crown text-slate-950"></i>
+        <span>Admin Panel</span>
+      </button>
+
+      <!-- Upload Video Button -->
+      <button onclick="openUploadModal()" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white transition-all flex items-center space-x-1">
+        <i class="fa-solid fa-plus text-snapv-cyan"></i>
+        <span class="hidden sm:inline">Upload</span>
+      </button>
+
+      <!-- Account Badge / Switch Account -->
+      <button onclick="openAuthModal()" class="flex items-center space-x-2 bg-slate-900 hover:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-800 transition-all text-xs">
+        <div class="w-6 h-6 rounded-full bg-red-950/60 border border-red-500/40 flex items-center justify-center text-snapv-red font-bold">
+          <i class="fa-solid fa-user"></i>
+        </div>
+        <div class="hidden sm:block text-left">
+          <p id="badgeEmail" class="font-semibold text-slate-200 truncate max-w-[110px]">razaisraza1@hotmail.com</p>
+        </div>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main SnapV Video Feed -->
+  <main class="pt-16 h-screen">
+    <section id="feedContainer" class="snap-container no-scrollbar relative w-full max-w-md mx-auto sm:max-w-md md:max-w-lg bg-slate-950">
+      <!-- Dynamic Video Cards loaded via JS -->
+    </section>
+  </main>
+
+  <!-- Super Admin Control Panel Modal -->
+  <div id="adminModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-yellow-500/40 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-yellow-500 to-amber-600 flex items-center justify-center text-slate-950 text-xl font-bold shadow-lg shadow-yellow-500/20">
+            <i class="fa-solid fa-crown"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-black text-white tracking-wide">SnapV Owner Dashboard</h2>
+            <p class="text-xs text-yellow-400 font-medium">Logged in as Super Admin: razaisraza1@hotmail.com</p>
+          </div>
+        </div>
+        <button onclick="closeAdminModal()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-all">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Scrollable Admin Panel Content -->
+      <div class="p-6 overflow-y-auto space-y-6">
+        
+        <!-- Summary Stats Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <p class="text-xs text-slate-400 font-medium">Total Platform Videos</p>
+            <p id="adminTotalVideos" class="text-2xl font-black text-snapv-cyan mt-1">0</p>
+          </div>
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <p class="text-xs text-slate-400 font-medium">Active Channels</p>
+            <p id="adminTotalCreators" class="text-2xl font-black text-purple-400 mt-1">0</p>
+          </div>
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <p class="text-xs text-slate-400 font-medium">Banned Creators</p>
+            <p id="adminBannedCount" class="text-2xl font-black text-snapv-red mt-1">0</p>
+          </div>
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <p class="text-xs text-slate-400 font-medium">Super Admin Status</p>
+            <p class="text-xs font-bold text-emerald-400 mt-2 flex items-center">
+              <i class="fa-solid fa-circle-check mr-1.5 text-emerald-400"></i> Full Access Active
+            </p>
+          </div>
+        </div>
+
+        <!-- Video Metrics Override Table -->
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center">
+              <i class="fa-solid fa-chart-line mr-2 text-snapv-cyan"></i> Video Metric Overrides & Content Control
+            </h3>
+            <span class="text-[11px] text-slate-400">Direct database injections</span>
+          </div>
+          <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-900 text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                <tr>
+                  <th class="p-3">Video Title / Creator</th>
+                  <th class="p-3">Views Count</th>
+                  <th class="p-3">Likes Count</th>
+                  <th class="p-3">Comments Count</th>
+                  <th class="p-3 text-right">Moderation Actions</th>
+                </tr>
+              </thead>
+              <tbody id="adminVideoTableBody" class="divide-y divide-slate-800/60">
+                <!-- Injected via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Creator Channel Moderation & Monetisation Table -->
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center">
+              <i class="fa-solid fa-users-gear mr-2 text-yellow-400"></i> Creator Channels & Monetisation Control
+            </h3>
+            <span class="text-[11px] text-slate-400">Followers & Ban Controls</span>
+          </div>
+          <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-900 text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                <tr>
+                  <th class="p-3">Channel Handle</th>
+                  <th class="p-3">Followers</th>
+                  <th class="p-3">Monetisation</th>
+                  <th class="p-3">Account Status</th>
+                  <th class="p-3 text-right">Owner Controls</th>
+                </tr>
+              </thead>
+              <tbody id="adminCreatorTableBody" class="divide-y divide-slate-800/60">
+                <!-- Injected via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Comments Slide-out Drawer -->
+  <div id="commentsDrawer" class="fixed inset-y-0 right-0 z-50 w-full sm:w-96 bg-slate-900 border-l border-slate-800 transform translate-x-full transition-transform duration-300 flex flex-col shadow-2xl">
+    <div class="p-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+      <h3 class="font-bold text-sm text-white"><span id="commentCountTitle">0</span> Comments</h3>
+      <button onclick="closeComments()" class="text-slate-400 hover:text-white p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+    </div>
+    <div id="commentsList" class="flex-1 overflow-y-auto p-4 space-y-4">
+      <!-- Comments injected dynamically -->
+    </div>
+    <div class="p-3 bg-slate-950 border-t border-slate-800 flex items-center space-x-2">
+      <input type="text" id="commentInput" placeholder="Add a comment..." class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-snapv-red">
+      <button onclick="postComment()" class="px-4 py-2 bg-snapv-red text-white font-bold text-xs rounded-xl hover:bg-red-600 transition-all">Post</button>
+    </div>
+  </div>
+
+  <!-- Upload Video Modal -->
+  <div id="uploadModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-base text-white flex items-center">
+          <i class="fa-solid fa-cloud-arrow-up mr-2 text-snapv-cyan"></i> Upload Video to SnapV
+        </h3>
+        <button onclick="closeUploadModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-400 mb-1 font-semibold">Video Title / Caption</label>
+          <input type="text" id="uploadTitle" placeholder="Enter video caption..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-snapv-cyan">
+        </div>
+        <div>
+          <label class="block text-slate-400 mb-1 font-semibold">Creator Username</label>
+          <input type="text" id="uploadCreator" placeholder="@yourhandle" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-snapv-cyan">
+        </div>
+        <div>
+          <label class="block text-slate-400 mb-1 font-semibold">Audio / Sound Name</label>
+          <input type="text" id="uploadSound" placeholder="Original Sound - @yourhandle" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-snapv-cyan">
+        </div>
+        <div>
+          <label class="block text-slate-400 mb-1 font-semibold">Sample Video Stream</label>
+          <select id="uploadVideoUrl" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-snapv-cyan">
+            <option value="https://assets.mixkit.co/videos/preview/mixkit-tree-branches-in-the-breeze-1188-large.mp4">Sonaria Forest Ambient Video</option>
+            <option value="https://assets.mixkit.co/videos/preview/mixkit-mysterious-pale-moon-in-the-sky-4034-large.mp4">Creature Hunt Night Scene</option>
+            <option value="https://assets.mixkit.co/videos/preview/mixkit-playing-an-arcade-game-41484-large.mp4">Gaming Arena Highlights</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex space-x-2 pt-2">
+        <button onclick="publishVideo()" class="flex-1 py-2.5 bg-gradient-to-r from-snapv-red to-pink-600 font-bold text-xs rounded-xl text-white hover:opacity-90 transition-all">
+          Publish Video
+        </button>
+        <button onclick="closeUploadModal()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 font-bold text-xs rounded-xl text-slate-300">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Account Switcher Modal -->
+  <div id="authModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-5 shadow-2xl text-center">
+      <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-yellow-500 to-amber-600 mx-auto flex items-center justify-center text-slate-950 text-xl font-bold">
+        <i class="fa-solid fa-user-gear"></i>
+      </div>
+      <div>
+        <h3 class="font-bold text-lg text-white">Switch Profile</h3>
+        <p class="text-xs text-slate-400 mt-1">Select an account profile to test access controls.</p>
+      </div>
+
+      <div class="space-y-2 text-left">
+        <button onclick="loginAs('razaisraza1@hotmail.com')" class="w-full p-3 rounded-xl bg-yellow-950/40 hover:bg-yellow-900/50 border border-yellow-500/40 transition-all flex items-center justify-between">
+          <div>
+            <p class="font-bold text-xs text-yellow-400">razaisraza1@hotmail.com</p>
+            <p class="text-[10px] text-slate-400">Super Admin / Platform Owner</p>
+          </div>
+          <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-yellow-400 text-slate-950">SUPER ADMIN</span>
+        </button>
+
+        <button onclick="loginAs('gneef_sonaria@snapv.com')" class="w-full p-3 rounded-xl bg-slate-800 hover:bg-slate-700 transition-all flex items-center justify-between">
+          <div>
+            <p class="font-bold text-xs text-white">@gneef_sonaria</p>
+            <p class="text-[10px] text-slate-400">Standard Content Creator</p>
+          </div>
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-700 text-slate-300">CREATOR</span>
+        </button>
+      </div>
+
+      <button onclick="closeAuthModal()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold text-slate-300">
+        Cancel
+      </button>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 border border-slate-700 px-4 py-2.5 rounded-xl shadow-2xl text-xs font-bold text-white opacity-0 pointer-events-none transition-all duration-300 flex items-center space-x-2">
+    <i id="toastIcon" class="fa-solid fa-circle-check text-snapv-cyan"></i>
+    <span id="toastMsg">Action completed successfully</span>
+  </div>
+
+  <!-- Main JavaScript Logic -->
+  <script>
+    // App State
+    let currentUser = {
+      email: "razaisraza1@hotmail.com",
+      role: "super_admin"
+    };
+
+    // Number Formatting Utility
+    function formatNumber(num) {
+      if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+      if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+      return num.toString();
+    }
+
+    // Platform Video Data
+    let videos = [
+      {
+        id: "vid_1",
+        creator: "@gneef_sonaria",
+        title: "I survived as a Tier 5 Boreal Warden for 100 Days! 🐲 #CreaturesOfSonaria #Roblox",
+        sound: "Original Sound - @gneef_sonaria",
+        url: "https://assets.mixkit.co/videos/preview/mixkit-tree-branches-in-the-breeze-1188-large.mp4",
+        views: 452000,
+        likes: 38400,
+        commentsCount: 1420,
+        liked: false,
+        comments: [
+          { user: "@elasmo_fan", text: "That Glowtail mutation look crazy!" },
+          { user: "@kora_king", text: "Boreal Warden is so overpowered in winter weather." }
+        ]
+      },
+      {
+        id: "vid_2",
+        creator: "@elasmo_official",
+        title: "Rule #1: NEVER drink water at midnight in Sonaria... 🩸 #SonariaHorror #Shorts",
+        sound: "Spooky Ambient - Sonaria Soundtracks",
+        url: "https://assets.mixkit.co/videos/preview/mixkit-mysterious-pale-moon-in-the-sky-4034-large.mp4",
+        views: 890000,
+        likes: 92100,
+        commentsCount: 3100,
+        liked: true,
+        comments: [
+          { user: "@teal_sonaria", text: "The suspense on this one was insane!!" },
+          { user: "@shadow_plush", text: "Part 2 please!" }
+        ]
+      },
+      {
+        id: "vid_3",
+        creator: "@teal_sonaria",
+        title: "Trading 50,000 Mush for Rare Plushies! W or L Trade? 🍄 #SonariaTrades",
+        sound: "Chill Beats - @teal_sonaria",
+        url: "https://assets.mixkit.co/videos/preview/mixkit-playing-an-arcade-game-41484-large.mp4",
+        views: 125000,
+        likes: 14200,
+        commentsCount: 680,
+        liked: false,
+        comments: [
+          { user: "@mush_trader", text: "Big Win, Octroma plushie alone is worth 30k!" }
+        ]
+      },
+      {
+        id: "vid_4",
+        creator: "@sonaria_hunter",
+        title: "Soloing the Entire Server with a Shadow Mutation Kora 🦖🔥 #RobloxSonaria",
+        sound: "Heavy Metal Boss Battle - Sonaria OST",
+        url: "https://assets.mixkit.co/videos/preview/mixkit-game-over-screen-with-glitch-effects-41486-large.mp4",
+        views: 640000,
+        likes: 74200,
+        commentsCount: 2150,
+        liked: false,
+        comments: [
+          { user: "@boreal_main", text: "That bite damage stat boost is insane!" },
+          { user: "@nest_grinder", text: "How many hours did it take to nest that shadow roll?" }
+        ]
+      },
+      {
+        id: "vid_5",
+        creator: "@elasmo_official",
+        title: "5 Hidden Secret Nest Caves in Sonaria You Never Knew Existed! 🗺️✨ #TipsAndTricks",
+        sound: "Mystical Atmosphere - Sound Design",
+        url: "https://assets.mixkit.co/videos/preview/mixkit-stars-in-the-night-sky-4039-large.mp4",
+        views: 310000,
+        likes: 29800,
+        commentsCount: 940,
+        liked: false,
+        comments: [
+          { user: "@newbie_playz", text: "Cave #3 is literally the safest spot on the entire map!" }
+        ]
+      },
+      {
+        id: "vid_6",
+        creator: "@gneef_sonaria",
+        title: "When you hear a flying Tier 5 monster breathing right behind you... 😳🏃‍♂️",
+        sound: "Run Meme Audio - Sound FX",
+        url: "https://assets.mixkit.co/videos/preview/mixkit-perspective-of-a-person-walking-in-a-forest-4245-large.mp4",
+        views: 1120000,
+        likes: 145000,
+        commentsCount: 5200,
+        liked: true,
+        comments: [
+          { user: "@flyer_pro", text: "Bro turned around and saw the grim reaper 💀" }
+        ]
+      }
+    ];
+
+    // Creator Channels Database
+    let creators = [
+      { handle: "@gneef_sonaria", followers: 45200, monetised: true, banned: false },
+      { handle: "@elasmo_official", followers: 128000, monetised: true, banned: false },
+      { handle: "@teal_sonaria", followers: 18400, monetised: true, banned: false },
+      { handle: "@sonaria_hunter", followers: 62100, monetised: true, banned: false }
+    ];
+
+    let activeVideoId = null;
+
+    // Render Video Feed
+    function renderFeed() {
+      const container = document.getElementById('feedContainer');
+      container.innerHTML = '';
+
+      videos.forEach((vid, index) => {
+        const creatorObj = creators.find(c => c.handle === vid.creator);
+        if (creatorObj && creatorObj.banned) return; // Skip banned content
+
+        const card = document.createElement('div');
+        card.className = "snap-child relative w-full bg-slate-950 overflow-hidden flex items-center justify-center";
+        card.id = `video-card-${vid.id}`;
+
+        card.innerHTML = `
+          <!-- Video Stream -->
+          <video id="player-${vid.id}" class="w-full h-full object-cover" loop playsinline onclick="togglePlay('${vid.id}')">
+            <source src="${vid.url}" type="video/mp4">
+          </video>
+
+          <!-- Heart Pop Overlay -->
+          <div id="heartPop-${vid.id}" class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0">
+            <i class="fa-solid fa-heart text-6xl text-snapv-red drop-shadow-lg heart-anim"></i>
+          </div>
+
+          <!-- Bottom Gradient Overlay -->
+          <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex justify-between items-end">
+            <!-- Left Info Block -->
+            <div class="max-w-[75%] space-y-2 text-left">
+              <div class="flex items-center space-x-2">
+                <span class="font-extrabold text-sm text-white drop-shadow">${vid.creator}</span>
+                ${creatorObj && creatorObj.monetised ? '<span class="px-1.5 py-0.5 rounded bg-yellow-400 text-slate-950 font-black text-[9px]">MONETISED</span>' : ''}
+              </div>
+              <p class="text-xs text-slate-200 line-clamp-2 drop-shadow">${vid.title}</p>
+              <div class="flex items-center space-x-2 text-[11px] text-slate-300">
+                <i class="fa-solid fa-music text-snapv-cyan"></i>
+                <span class="truncate max-w-[180px]">${vid.sound}</span>
+              </div>
+            </div>
+
+            <!-- Right Interactive Sidebar -->
+            <div class="flex flex-col items-center space-y-4 pb-2">
+              <!-- Creator Avatar -->
+              <div class="w-10 h-10 rounded-full bg-slate-800 border-2 border-snapv-red overflow-hidden flex items-center justify-center text-white font-bold text-xs shadow-md">
+                ${vid.creator.substring(1, 3).toUpperCase()}
+              </div>
+
+              <!-- Like Button -->
+              <button onclick="toggleLike('${vid.id}')" class="flex flex-col items-center group">
+                <div class="w-10 h-10 rounded-full bg-slate-900/60 backdrop-blur-md flex items-center justify-center border border-slate-700/50 group-hover:bg-slate-800 transition-all">
+                  <i id="likeIcon-${vid.id}" class="fa-solid fa-heart text-lg ${vid.liked ? 'text-snapv-red' : 'text-slate-300'}"></i>
+                </div>
+                <span id="likeCount-${vid.id}" class="text-[10px] font-bold mt-1 text-slate-200">${formatNumber(vid.likes)}</span>
+              </button>
+
+              <!-- Comment Button -->
+              <button onclick="openComments('${vid.id}')" class="flex flex-col items-center group">
+                <div class="w-10 h-10 rounded-full bg-slate-900/60 backdrop-blur-md flex items-center justify-center border border-slate-700/50 group-hover:bg-slate-800 transition-all">
+                  <i class="fa-solid fa-comment-dots text-lg text-slate-300"></i>
+                </div>
+                <span id="commentCount-${vid.id}" class="text-[10px] font-bold mt-1 text-slate-200">${formatNumber(vid.commentsCount)}</span>
+              </button>
+
+              <!-- Share Button -->
+              <button onclick="shareVideo('${vid.id}')" class="flex flex-col items-center group">
+                <div class="w-10 h-10 rounded-full bg-slate-900/60 backdrop-blur-md flex items-center justify-center border border-slate-700/50 group-hover:bg-slate-800 transition-all">
+                  <i class="fa-solid fa-share text-lg text-slate-300"></i>
+                </div>
+                <span class="text-[10px] font-bold mt-1 text-slate-200">${formatNumber(vid.views)}</span>
+              </button>
+            </div>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+
+      setupObserver();
+    }
+
+    // Scroll Auto-play Observer
+    function setupObserver() {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          const videoId = entry.target.id.replace('video-card-', '');
+          const player = document.getElementById(`player-${videoId}`);
+          if (player) {
+            if (entry.isIntersecting) {
+              player.play().catch(() => {});
+            } else {
+              player.pause();
+            }
+          }
+        });
+      }, { threshold: 0.6 });
+
+      document.querySelectorAll('.snap-child').forEach(card => observer.observe(card));
+    }
+
+    // Play/Pause Toggle
+    function togglePlay(id) {
+      const player = document.getElementById(`player-${id}`);
+      if (player) {
+        if (player.paused) player.play();
+        else player.pause();
+      }
+    }
+
+    // Like Action
+    function toggleLike(id) {
+      const vid = videos.find(v => v.id === id);
+      if (!vid) return;
+
+      vid.liked = !vid.liked;
+      vid.likes += vid.liked ? 1 : -1;
+
+      document.getElementById(`likeIcon-${id}`).className = `fa-solid fa-heart text-lg ${vid.liked ? 'text-snapv-red' : 'text-slate-300'}`;
+      document.getElementById(`likeCount-${id}`).innerText = formatNumber(vid.likes);
+
+      if (vid.liked) {
+        const pop = document.getElementById(`heartPop-${id}`);
+        pop.classList.remove('opacity-0');
+        setTimeout(() => pop.classList.add('opacity-0'), 800);
+      }
+    }
+
+    // Comment Drawer Controls
+    function openComments(id) {
+      activeVideoId = id;
+      const vid = videos.find(v => v.id === id);
+      if (!vid) return;
+
+      document.getElementById('commentCountTitle').innerText = formatNumber(vid.commentsCount);
+      const list = document.getElementById('commentsList');
+      list.innerHTML = '';
+
+      vid.comments.forEach(c => {
+        const item = document.createElement('div');
+        item.className = "bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs space-y-1";
+        item.innerHTML = `
+          <p class="font-bold text-snapv-cyan">${c.user}</p>
+          <p class="text-slate-300">${c.text}</p>
+        `;
+        list.appendChild(item);
+      });
+
+      document.getElementById('commentsDrawer').classList.remove('translate-x-full');
+    }
+
+    function closeComments() {
+      document.getElementById('commentsDrawer').classList.add('translate-x-full');
+    }
+
+    function postComment() {
+      const input = document.getElementById('commentInput');
+      if (!input.value.trim() || !activeVideoId) return;
+
+      const vid = videos.find(v => v.id === activeVideoId);
+      if (vid) {
+        vid.comments.push({ user: "@razaisraza1", text: input.value });
+        vid.commentsCount++;
+        document.getElementById(`commentCount-${activeVideoId}`).innerText = formatNumber(vid.commentsCount);
+        openComments(activeVideoId);
+        input.value = '';
+        showToast("Comment posted!");
+      }
+    }
+
+    // Share Video
+    function shareVideo(id) {
+      showToast("Link copied to clipboard!");
+    }
+
+    // Account Switcher Logic
+    function loginAs(email) {
+      currentUser.email = email;
+      currentUser.role = (email === "razaisraza1@hotmail.com") ? "super_admin" : "user";
+      
+      document.getElementById('badgeEmail').innerText = email;
+      document.getElementById('adminBtn').style.display = (currentUser.role === "super_admin") ? "flex" : "none";
+
+      closeAuthModal();
+      showToast(`Logged in as ${email}`);
+    }
+
+    function openAuthModal() { document.getElementById('authModal').classList.remove('hidden'); }
+    function closeAuthModal() { document.getElementById('authModal').classList.add('hidden'); }
+
+    // Upload Video Modal
+    function openUploadModal() { document.getElementById('uploadModal').classList.remove('hidden'); }
+    function closeUploadModal() { document.getElementById('uploadModal').classList.add('hidden'); }
+
+    function publishVideo() {
+      const title = document.getElementById('uploadTitle').value.trim() || "New SnapV Short Video!";
+      const creator = document.getElementById('uploadCreator').value.trim() || "@new_creator";
+      const sound = document.getElementById('uploadSound').value.trim() || "Original Sound";
+      const url = document.getElementById('uploadVideoUrl').value;
+
+      videos.unshift({
+        id: `vid_${Date.now()}`,
+        creator: creator.startsWith('@') ? creator : `@${creator}`,
+        title,
+        sound,
+        url,
+        views: 1,
+        likes: 0,
+        commentsCount: 0,
+        liked: false,
+        comments: []
+      });
+
+      if (!creators.find(c => c.handle === creator)) {
+        creators.push({ handle: creator.startsWith('@') ? creator : `@${creator}`, followers: 10, monetised: false, banned: false });
+      }
+
+      closeUploadModal();
+      renderFeed();
+      showToast("Video published live to feed!");
+    }
+
+    // ==========================================
+    // SUPER ADMIN CONTROL PANEL LOGIC
+    // ==========================================
+    function openAdminModal() {
+      if (currentUser.email !== "razaisraza1@hotmail.com") {
+        showToast("Access Denied: Owner email required!");
+        return;
+      }
+      refreshAdminTables();
+      document.getElementById('adminModal').classList.remove('hidden');
+    }
+
+    function closeAdminModal() {
+      document.getElementById('adminModal').classList.add('hidden');
+    }
+
+    function refreshAdminTables() {
+      // Summary Counts
+      document.getElementById('adminTotalVideos').innerText = videos.length;
+      document.getElementById('adminTotalCreators').innerText = creators.length;
+      document.getElementById('adminBannedCount').innerText = creators.filter(c => c.banned).length;
+
+      // Video Overrides Table
+      const vidBody = document.getElementById('adminVideoTableBody');
+      vidBody.innerHTML = '';
+      videos.forEach(v => {
+        const row = document.createElement('tr');
+        row.className = "hover:bg-slate-900/80 transition-all";
+        row.innerHTML = `
+          <td class="p-3">
+            <p class="font-bold text-white max-w-[180px] truncate">${v.title}</p>
+            <p class="text-[10px] text-snapv-cyan">${v.creator}</p>
+          </td>
+          <td class="p-3">
+            <input type="number" value="${v.views}" onchange="updateVideoMetric('${v.id}', 'views', this.value)" class="w-20 bg-slate-900 border border-slate-700 rounded p-1 text-xs text-white">
+          </td>
+          <td class="p-3">
+            <input type="number" value="${v.likes}" onchange="updateVideoMetric('${v.id}', 'likes', this.value)" class="w-20 bg-slate-900 border border-slate-700 rounded p-1 text-xs text-white">
+          </td>
+          <td class="p-3">
+            <input type="number" value="${v.commentsCount}" onchange="updateVideoMetric('${v.id}', 'commentsCount', this.value)" class="w-20 bg-slate-900 border border-slate-700 rounded p-1 text-xs text-white">
+          </td>
+          <td class="p-3 text-right space-x-1">
+            <button onclick="adminDeleteVideo('${v.id}')" class="px-2 py-1 bg-red-950/80 hover:bg-red-900 text-snapv-red border border-red-500/40 rounded text-[10px] font-bold">
+              Delete
+            </button>
+          </td>
+        `;
+        vidBody.appendChild(row);
+      });
+
+      // Creator Moderation Table
+      const creatorBody = document.getElementById('adminCreatorTableBody');
+      creatorBody.innerHTML = '';
+      creators.forEach(c => {
+        const row = document.createElement('tr');
+        row.className = "hover:bg-slate-900/80 transition-all";
+        row.innerHTML = `
+          <td class="p-3 font-bold text-white">${c.handle}</td>
+          <td class="p-3">
+            <div class="flex items-center space-x-1">
+              <input type="number" value="${c.followers}" onchange="updateFollowers('${c.handle}', this.value)" class="w-20 bg-slate-900 border border-slate-700 rounded p-1 text-xs text-white">
+            </div>
+          </td>
+          <td class="p-3">
+            <button onclick="toggleMonetisation('${c.handle}')" class="px-2 py-1 rounded text-[10px] font-bold ${c.monetised ? 'bg-yellow-400 text-slate-950' : 'bg-slate-800 text-slate-400'}">
+              ${c.monetised ? 'Monetised' : 'Off'}
+            </button>
+          </td>
+          <td class="p-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${c.banned ? 'bg-red-950 text-snapv-red border border-red-500/40' : 'bg-emerald-950 text-emerald-400 border border-emerald-500/40'}">
+              ${c.banned ? 'BANNED' : 'Active'}
+            </span>
+          </td>
+          <td class="p-3 text-right space-x-1">
+            <button onclick="toggleBanChannel('${c.handle}')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded text-[10px] font-bold">
+              ${c.banned ? 'Unban' : 'Ban Channel'}
+            </button>
+          </td>
+        `;
+        creatorBody.appendChild(row);
+      });
+    }
+
+    function updateVideoMetric(id, field, value) {
+      const vid = videos.find(v => v.id === id);
+      if (vid) {
+        vid[field] = parseInt(value) || 0;
+        renderFeed();
+        showToast(`Updated ${field} to ${value}`);
+      }
+    }
+
+    function adminDeleteVideo(id) {
+      videos = videos.filter(v => v.id !== id);
+      renderFeed();
+      refreshAdminTables();
+      showToast("Video permanently deleted!");
+    }
+
+    function updateFollowers(handle, val) {
+      const c = creators.find(cr => cr.handle === handle);
+      if (c) {
+        c.followers = parseInt(val) || 0;
+        showToast(`Updated ${handle} followers`);
+      }
+    }
+
+    function toggleMonetisation(handle) {
+      const c = creators.find(cr => cr.handle === handle);
+      if (c) {
+        c.monetised = !c.monetised;
+        renderFeed();
+        refreshAdminTables();
+        showToast(`${handle} monetisation toggled!`);
+      }
+    }
+
+    function toggleBanChannel(handle) {
+      const c = creators.find(cr => cr.handle === handle);
+      if (c) {
+        c.banned = !c.banned;
+        renderFeed();
+        refreshAdminTables();
+        showToast(`${handle} ${c.banned ? 'Banned' : 'Unbanned'} successfully!`);
+      }
+    }
+
+    // Toast Notification Helper
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').innerText = msg;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      setTimeout(() => toast.classList.add('opacity-0', 'pointer-events-none'), 2200);
+    }
+
+    // Init App
+    window.onload = function() {
+      document.getElementById('adminBtn').style.display = (currentUser.role === "super_admin") ? "flex" : "none";
+      renderFeed();
+    };
+  </script>
+</body>
+</html>
